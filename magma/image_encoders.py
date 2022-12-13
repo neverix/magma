@@ -4,7 +4,7 @@ from typing import Callable, Union
 from torchtyping import patch_typeguard
 from einops import rearrange
 import timm
-import clip
+import open_clip
 from functools import partial
 
 # ----------------------------- Utils --------------------------------------
@@ -54,15 +54,17 @@ def clip_encoder(
     If the variant is a resnet model, we also remove the attention pooling.
     """
     if name in ["clip", "ViT-B/32"]:
-        name = "ViT-B/32"
+        name, pretrained = "ViT-B-32", "openai"
     elif name in ["clip_resnet", "RN50x4"]:
-        name = "RN50x4"
+        name, pretrained = "RN50x4", "openai"
     elif name in ["clip_resnet_large", "RN50x16"]:
-        name = "RN50x16"
+        name, pretrained = "RN50x16", "openai
+    elif name in ["openclip"]:  # TODO
+        name, pretraiend = "ViT-B-32", "laion2b_s34b_b79k"
     else:
         raise ValueError(f"encoder {name} not recognized")
 
-    encoder = clip.load(name, device=device)[0].visual
+    encoder = open_clip.create_model(name, device=device, pretrained=pretrained)[0].visual
 
     if device is not None:
         encoder = encoder.to(device)
