@@ -9,10 +9,10 @@ from functools import partial
 
 # ----------------------------- Utils --------------------------------------
 
-clip.model.LayerNorm = (
-    nn.LayerNorm
-)  # we need to patch this for clip to work with deepspeed
-patch_typeguard()  # needed for torchtyping typechecks to work
+# clip.model.LayerNorm = (
+#     nn.LayerNorm
+# )  # we need to patch this for clip to work with deepspeed
+# patch_typeguard()  # needed for torchtyping typechecks to work
 
 
 class Lambda(torch.nn.Module):
@@ -58,9 +58,9 @@ def clip_encoder(
     elif name in ["clip_resnet", "RN50x4"]:
         name, pretrained = "RN50x4", "openai"
     elif name in ["clip_resnet_large", "RN50x16"]:
-        name, pretrained = "RN50x16", "openai
+        name, pretrained = "RN50x16", "openai"
     elif name in ["openclip"]:  # TODO
-        name, pretraiend = "ViT-B-32", "laion2b_s34b_b79k"
+        name, pretrained = "ViT-B-32", "laion2b_s34b_b79k"
     else:
         raise ValueError(f"encoder {name} not recognized")
 
