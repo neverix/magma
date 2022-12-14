@@ -64,7 +64,7 @@ def clip_encoder(
     else:
         raise ValueError(f"encoder {name} not recognized")
 
-    encoder = open_clip.create_model(name, device=device, pretrained=pretrained)[0].visual
+    encoder = open_clip.create_model(name, device=device, pretrained=pretrained).visual
 
     if device is not None:
         encoder = encoder.to(device)
