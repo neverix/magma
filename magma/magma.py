@@ -9,7 +9,7 @@ from transformers.file_utils import ModelOutput
 from magma.config import MultimodalConfig
 
 from magma.utils import get_tokenizer
-from .language_model import get_gptj
+from . import language_model
 from .adapters import (
     Adapter,
     ParallelAdapter,
@@ -40,17 +40,23 @@ class Magma(nn.Module):
             "cuda" if torch.cuda.is_available() else "cpu"
         )
         self.config = config
-        self.lm = get_gptj() #.to(self.device)
+        self.lm = getattr(language_model, f"get_{config.lm_name}")(config.lm_path)  #.to(self.device)
         self.seq_len = self.lm.config.max_position_embeddings
 
-        self.tokenizer = get_tokenizer("gpt2", sequence_length=self.seq_len)
+        self.tokenizer = get_tokenizer(config.lm_path if config.lm_path is not None else "gpt2", sequence_length=self.seq_len)
 
         self.image_token = self.tokenizer.cls_token_id
         self.eos_token = self.tokenizer.eos_token_id
         self.lm.resize_token_embeddings(len(self.tokenizer))
         self.lm.config.pad_token_id = self.tokenizer.eos_token_id
-        self.word_embedding = self.lm.transformer.wte #.to(device)
-        self.transformer = self.lm.transformer.h
+        if config.lm_name == "gptj":
+            self.word_embedding = self.lm.transformer.wte #.to(device)
+            self.transformer = self.lm.transformer.h
+        elif config.lm_name == "neox":
+            self.word_embedding = self.lm.gpt_neox.embed_in
+            self.transformer = self.lm.gpt_neox.layers
+        else:
+            raise NotImplementedError(f"LM `{self.lm_name}` not recognized")
 
         # adapter settings
         self.mlp_adapter_added, self.attn_adapter_added = False, False
@@ -66,7 +72,7 @@ class Magma(nn.Module):
         self.transforms = get_transforms(
             config.image_size,
             config.encoder_name,
-            input_resolution=self.image_prefix.enc.input_resolution,
+            input_resolution=getattr(self.image_prefix.enc, "input_resolution", getattr(self.image_prefix.enc, "image_size")),
         )
 
         # add adapters
@@ -120,6 +126,9 @@ class Magma(nn.Module):
             "mlp",
             "attention",
         ], "location must be one of 'mlp' or 'attention'"
+        if self.config.lm_name == "neox":
+            ff_attr = "mlp"
+            attn_attr = "attention"
 
         for l in range(len(self.transformer)):
             if location == "mlp":

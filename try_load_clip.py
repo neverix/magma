@@ -1,8 +1,7 @@
 from magma import Magma
 from magma.image_input import ImageInput
-from magma.image_encoders import get_image_encoder
 
-model = get_image_encoder("openclip")
+magma = Magma("configs/testing.yml")
 
 inputs =[
     ## supports urls and path/to/image

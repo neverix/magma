@@ -1,6 +1,6 @@
 import argparse
 import torch.distributed as dist
-from transformers import GPT2TokenizerFast
+from transformers import AutoTokenizer, GPT2TokenizerFast
 import deepspeed
 from pathlib import Path
 import wandb
@@ -46,7 +46,7 @@ def get_tokenizer(name="gpt2", sequence_length=2048):
     """
     if name == "gpt2":
         tokenizer = GPT2TokenizerFast.from_pretrained("gpt2")
-        tokenizer.pad_token_id = tokenizer.eos_token
+        # tokenizer.pad_token_id = tokenizer.eos_token
         tokenizer.padding_side = "right"
         tokenizer.model_max_length = sequence_length
         # setup lm settings
@@ -54,7 +54,14 @@ def get_tokenizer(name="gpt2", sequence_length=2048):
             {"cls_token": "<|image|>"}
         )  # add special image token to tokenizer
     else:
-        raise ValueError(f"Tokenizer {name} not recognized")
+        # raise ValueError(f"Tokenizer {name} not recognized")
+        tokenizer = AutoTokenizer.from_pretrained(name)
+        tokenizer.padding_side = "right"
+        tokenizer.model_max_length = sequence_length
+        # setup lm settings
+        tokenizer.add_special_tokens(
+            {"cls_token": "<|image|>"}
+        )  # add special image token to tokenizer
     return tokenizer
 
 

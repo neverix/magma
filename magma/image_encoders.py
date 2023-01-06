@@ -59,12 +59,18 @@ def clip_encoder(
         name, pretrained = "RN50x4", "openai"
     elif name in ["clip_resnet_large", "RN50x16"]:
         name, pretrained = "RN50x16", "openai"
-    elif name in ["openclip"]:  # TODO
-        name, pretrained = "ViT-B-32", "laion2b_s34b_b79k"
+    elif "openclip" in name:
+        if "H" in name:
+            name, pretrained = "ViT-H-14", "laion2b_s32b_b79k"
+        elif "B" in name and "32" in name:
+            name, pretrained = "ViT-B-32", "laion2b_s34b_b79k"
+        else:
+            raise NotImplementedError(f"Encoder {name} not recognized")   
     else:
-        raise ValueError(f"encoder {name} not recognized")
+        raise NotImplementedError(f"Encoder {name} not recognized")
 
-    encoder = open_clip.create_model(name, device=device, pretrained=pretrained).visual
+    # TODO better internet connection
+    encoder = open_clip.create_model(name, device=device).visual  # , pretrained=pretrained).visual
 
     if device is not None:
         encoder = encoder.to(device)

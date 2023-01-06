@@ -2,6 +2,7 @@ from dataclasses import dataclass, asdict
 import yaml
 from pprint import pprint
 from .utils import is_main
+from typing import Optional
 import os
 from pathlib import Path
 import uuid
@@ -41,6 +42,10 @@ class MultimodalConfig:
     run_blind: bool = False
     fine_tune: bool = False
     load_optimizer: bool = True
+    
+    # Language model:
+    lm_name: str = "gptj"
+    lm_path: Optional[str] = None
 
     # Checkpointing:
     # ------------------------------------------------------------

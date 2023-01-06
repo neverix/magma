@@ -18,6 +18,7 @@ ENCODER_OUT_DIMS = {
     "clip": 512,
     "clip_resnet": 2560,
     "clip_resnet_large": 3072,
+    "openclip-H": 5120
 }
 
 
