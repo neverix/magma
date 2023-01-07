@@ -1,4 +1,4 @@
- import torch
+import torch
 from transformers import GPTNeoForCausalLM, GPTNeoXForCausalLM, AutoConfig, GPT2LMHeadModel
 from .utils import print_main
 from pathlib import Path
