@@ -305,7 +305,7 @@ class Magma(nn.Module):
             sd = sd["module"]
 
         print_main(f'loading magma checkpoint from: {checkpoint_path}')
-        model.to(device).load_state_dict(sd, strict=False)
+        model.load_state_dict(sd, strict=False)
         print_main("magma successfully loaded")
 
         model.half().to(device).eval()
