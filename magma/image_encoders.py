@@ -70,16 +70,38 @@ def clip_encoder(
         raise NotImplementedError(f"Encoder {name} not recognized")
 
     # TODO better internet connection
-    encoder = open_clip.create_model(name, device=device).visual  # , pretrained=pretrained).visual
-
-    if device is not None:
-        encoder = encoder.to(device)
+    encoder = open_clip.create_model(name, device=device, precision="fp16" if "cuda" in str(device) else "fp32").visual  # , pretrained=pretrained).visual
 
     if "RN" in name:
         # remove attention pooling
         encoder.attnpool = Lambda(
             partial(rearrange, pattern="b d h w -> b (h w) d")
         )  # remove attn pooling, just use reshaped features
+    
+    if False and hasattr(encoder, "transformer"):  # TODO when do we want to disable pooling?
+        def forward(self, x: torch.Tensor):
+            x = self.conv1(x)  # shape = [*, width, grid, grid]
+            x = x.reshape(x.shape[0], x.shape[1], -1)  # shape = [*, width, grid ** 2]
+            x = x.permute(0, 2, 1)  # shape = [*, grid ** 2, width]
+            x = torch.cat(
+                [self.class_embedding.to(x.dtype) + torch.zeros(x.shape[0], 1, x.shape[-1], dtype=x.dtype, device=x.device),
+                 x], dim=1)  # shape = [*, grid ** 2 + 1, width]
+            x = x + self.positional_embedding.to(x.dtype)
+
+            ## a patch_dropout of 0. would mean it is disabled and this function would do nothing but return what was passed in
+            # x = self.patch_dropout(x)
+            x = self.ln_pre(x)
+
+            x = x.permute(1, 0, 2)  # NLD -> LND
+            x = self.transformer(x)
+            x = self.ln_post(x)
+            x = x.permute(1, 0, 2)  # LND -> NLD
+            return x
+        encoder.forward = partial(forward, encoder)
+
+
+    if device is not None:
+        encoder = encoder.to(device)
 
     return encoder
 

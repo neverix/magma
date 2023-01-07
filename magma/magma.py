@@ -40,7 +40,7 @@ class Magma(nn.Module):
             "cuda" if torch.cuda.is_available() else "cpu"
         )
         self.config = config
-        self.lm = getattr(language_model, f"get_{config.lm_name}")(config.lm_path)  #.to(self.device)
+        self.lm = getattr(language_model, f"get_{config.lm_name}")(config.lm_path).to(self.device)
         self.seq_len = self.lm.config.max_position_embeddings
 
         self.tokenizer = get_tokenizer(config.lm_path if config.lm_path is not None else "gpt2", sequence_length=self.seq_len)
@@ -50,13 +50,14 @@ class Magma(nn.Module):
         self.lm.resize_token_embeddings(len(self.tokenizer))
         self.lm.config.pad_token_id = self.tokenizer.eos_token_id
         if config.lm_name == "gptj":
-            self.word_embedding = self.lm.transformer.wte #.to(device)
+            self.word_embedding = self.lm.transformer.wte
             self.transformer = self.lm.transformer.h
         elif config.lm_name == "neox":
             self.word_embedding = self.lm.gpt_neox.embed_in
             self.transformer = self.lm.gpt_neox.layers
         else:
             raise NotImplementedError(f"LM `{self.lm_name}` not recognized")
+        self.word_embedding = self.word_embedding.to(device)
 
         # adapter settings
         self.mlp_adapter_added, self.attn_adapter_added = False, False
@@ -64,7 +65,7 @@ class Magma(nn.Module):
         self.image_prefix = ImagePrefix(
             config=config,
             out_dim=self.lm.config.hidden_size,
-        ) #.to(self.device)
+        ).to(self.device)
 
         # might change based on the type of image encoder, so get from prefix instead of config
         self.image_prefix_seq_len = self.image_prefix.out_seq_len
@@ -213,8 +214,8 @@ class Magma(nn.Module):
                 x = x.to(self.device)
                 emb_list.append(self.word_embedding(x))
             elif x.ndim == 4:
-                x = x.to(self.device).half()
-                image_embeddings = self.image_prefix(x)
+                x = x.to(self.device)  # .half()
+                image_embeddings = self.image_prefix(x.to(next(iter(self.image_prefix.parameters())).data))
                 emb_list.append(image_embeddings)
             else:
                 raise ValueError(f"Expected 2d or 4d tensor, got {x.ndim}d")

@@ -78,6 +78,6 @@ def get_neox(
     
     with no_init_weights():
         # TODO better internet connection
-        model = GPTNeoXForCausalLM(config=config)  # .from_pretrained(config._name_or_path, config=config)
+        model = GPTNeoXForCausalLM.from_pretrained(config._name_or_path, config=config)
     return model
 
