@@ -26,7 +26,7 @@ from .transforms import get_transforms
 
 
 class Magma(nn.Module):
-    def __init__(self, config, device=None):
+    def __init__(self, config, device=None, init_weights=True):
         super().__init__()
 
         if isinstance(config, (str, Path)):
@@ -40,7 +40,7 @@ class Magma(nn.Module):
             "cuda" if torch.cuda.is_available() else "cpu"
         )
         self.config = config
-        self.lm = getattr(language_model, f"get_{config.lm_name}")(config.lm_path).to(self.device)
+        self.lm = getattr(language_model, f"get_{config.lm_name}")(config.lm_path)
         self.seq_len = self.lm.config.max_position_embeddings
 
         self.tokenizer = get_tokenizer(config.lm_path if config.lm_path is not None else "gpt2", sequence_length=self.seq_len)
@@ -297,7 +297,7 @@ class Magma(nn.Module):
             print_main(f'checkpoint: {checkpoint_path} does not exist, downloading model')
             download_checkpoint(checkpoint_url = checkpoint_url, save_as = checkpoint_path)
 
-        model = cls(config = config_path)
+        model = cls(config = config_path, init_weights = False)
 
         sd = torch.load(checkpoint_path, map_location=torch.device("cpu"))
         if "module" in sd.keys():

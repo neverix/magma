@@ -1,8 +1,9 @@
-import torch
+ import torch
 from transformers import GPTNeoForCausalLM, GPTNeoXForCausalLM, AutoConfig, GPT2LMHeadModel
 from .utils import print_main
 from pathlib import Path
 from transformers.modeling_utils import no_init_weights
+from accelerate import init_empty_weights
 from typing import Optional
 
 LANGUAGE_MODELS = [
@@ -29,6 +30,7 @@ def gptj_config():
 def get_gptj(
     gradient_checkpointing: bool = True,
     from_pretrained=False,
+    init_weights=True,
 ) -> torch.nn.Module:
     """
     Loads GPTJ language model from HF
@@ -42,7 +44,7 @@ def get_gptj(
     if from_pretrained:
         raise NotImplemented("GPTJ pretrained not implemented")
     else:
-        with no_init_weights():
+        with init_empty_weights(not init_weights):  # no_init_weights():
             model = GPTNeoForCausalLM(config=config)
     return model
 
@@ -64,7 +66,8 @@ def neox_config(path: Optional[str] = None):
 def get_neox(
     path: str = None,
     gradient_checkpointing: bool = True,
-    from_pretrained=False,
+    init_weights=True,
+    # from_pretrained=True,  # TODO think about this
 ) -> torch.nn.Module:
     """
     Loads NeoX language model from HF
@@ -76,7 +79,7 @@ def get_neox(
         config.use_cache = False
     config.model_device = "cpu"
     
-    with no_init_weights():
+    with no_init_weights(not init_weights):
         # TODO better internet connection
         model = GPTNeoXForCausalLM.from_pretrained(config._name_or_path, config=config)
     return model
