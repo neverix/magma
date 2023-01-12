@@ -298,7 +298,7 @@ class Magma(nn.Module):
             download_checkpoint(checkpoint_url = checkpoint_url, save_as = checkpoint_path)
 
         model = cls(config = config_path, init_weights = False)
-        map_device = device  # "cpu"
+        map_device = "cpu"
 
         sd = torch.load(checkpoint_path, map_location=map_device)
         if "module" in sd.keys():
