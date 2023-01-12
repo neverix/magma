@@ -287,7 +287,7 @@ class Magma(nn.Module):
             print_main(f'checkpoint: {checkpoint_path} does not exist, downloading model')
             download_checkpoint(checkpoint_url = checkpoint_url, save_as = checkpoint_path)
 
-        model = cls(config = config_path)
+        model = cls(config = config_path).half()
 
         sd = torch.load(checkpoint_path, map_location=device)
         if "module" in sd.keys():
@@ -297,5 +297,5 @@ class Magma(nn.Module):
         model.load_state_dict(sd, strict=False)
         print_main("magma successfully loaded")
 
-        model.half().to(device).eval()
+        model.to(device).eval()
         return model
