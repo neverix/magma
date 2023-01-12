@@ -36,7 +36,7 @@ def get_gptj(
     config.gradient_checkpointing = gradient_checkpointing
     if gradient_checkpointing:
         config.use_cache = False
-    config.model_device = "cpu"
+    config.model_device = "cuda:0" if torch.cuda.is_available() else "cpu"
     if from_pretrained:
         raise NotImplemented("GPTJ pretrained not implemented")
     else:
