@@ -11,6 +11,7 @@ from .config import MultimodalConfig
 ENCODER_SEQ_LENS = {
     "clip_resnet": 49,
     "clip_resnet_large": 144,
+    "openclip-H": 257
 }
 
 ENCODER_OUT_DIMS = {
@@ -18,6 +19,7 @@ ENCODER_OUT_DIMS = {
     "clip": 512,
     "clip_resnet": 2560,
     "clip_resnet_large": 3072,
+    "openclip-H": 1024,
 }
 
 
@@ -48,6 +50,7 @@ class ImagePrefix(nn.Module):
         # get image encoder backbone
         self.enc = get_image_encoder(
             config.encoder_name,
+            # device=self.device,
             pretrained=config.pretrained_img_encoder,
         )
         self.encoder_out_dim = ENCODER_OUT_DIMS[

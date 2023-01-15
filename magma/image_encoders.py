@@ -4,15 +4,15 @@ from typing import Callable, Union
 from torchtyping import patch_typeguard
 from einops import rearrange
 import timm
-import clip
+import open_clip
 from functools import partial
 
 # ----------------------------- Utils --------------------------------------
 
-clip.model.LayerNorm = (
-    nn.LayerNorm
-)  # we need to patch this for clip to work with deepspeed
-patch_typeguard()  # needed for torchtyping typechecks to work
+# clip.model.LayerNorm = (
+#     nn.LayerNorm
+# )  # we need to patch this for clip to work with deepspeed
+# patch_typeguard()  # needed for torchtyping typechecks to work
 
 
 class Lambda(torch.nn.Module):
@@ -54,24 +54,54 @@ def clip_encoder(
     If the variant is a resnet model, we also remove the attention pooling.
     """
     if name in ["clip", "ViT-B/32"]:
-        name = "ViT-B/32"
+        name, pretrained = "ViT-B-32", "openai"
     elif name in ["clip_resnet", "RN50x4"]:
-        name = "RN50x4"
+        name, pretrained = "RN50x4", "openai"
     elif name in ["clip_resnet_large", "RN50x16"]:
-        name = "RN50x16"
+        name, pretrained = "RN50x16", "openai"
+    elif "openclip" in name:
+        if "H" in name:
+            name, pretrained = "ViT-H-14", "laion2b_s32b_b79k"
+        elif "B" in name and "32" in name:
+            name, pretrained = "ViT-B-32", "laion2b_s34b_b79k"
+        else:
+            raise NotImplementedError(f"Encoder {name} not recognized")
     else:
-        raise ValueError(f"encoder {name} not recognized")
+        raise NotImplementedError(f"Encoder {name} not recognized")
 
-    encoder = clip.load(name, device=device)[0].visual
-
-    if device is not None:
-        encoder = encoder.to(device)
+    # TODO better internet connection
+    encoder = open_clip.create_model(name, device=device, precision="fp16" if "cuda" in str(device) else "fp32").visual  # , pretrained=pretrained).visual
 
     if "RN" in name:
         # remove attention pooling
         encoder.attnpool = Lambda(
             partial(rearrange, pattern="b d h w -> b (h w) d")
         )  # remove attn pooling, just use reshaped features
+
+    if False and hasattr(encoder, "transformer"):  # TODO when do we want to disable pooling?
+        def forward(self, x: torch.Tensor):
+            x = self.conv1(x)  # shape = [*, width, grid, grid]
+            x = x.reshape(x.shape[0], x.shape[1], -1)  # shape = [*, width, grid ** 2]
+            x = x.permute(0, 2, 1)  # shape = [*, grid ** 2, width]
+            x = torch.cat(
+                [self.class_embedding.to(x.dtype) + torch.zeros(x.shape[0], 1, x.shape[-1], dtype=x.dtype, device=x.device),
+                 x], dim=1)  # shape = [*, grid ** 2 + 1, width]
+            x = x + self.positional_embedding.to(x.dtype)
+
+            ## a patch_dropout of 0. would mean it is disabled and this function would do nothing but return what was passed in
+            # x = self.patch_dropout(x)
+            x = self.ln_pre(x)
+
+            x = x.permute(1, 0, 2)  # NLD -> LND
+            x = self.transformer(x)
+            x = self.ln_post(x)
+            x = x.permute(1, 0, 2)  # LND -> NLD
+            return x
+        encoder.forward = partial(forward, encoder)
+
+
+    if device is not None:
+        encoder = encoder.to(device)
 
     return encoder
 

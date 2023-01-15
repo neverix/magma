@@ -20,6 +20,7 @@ def save_to_jsons(data_list, target_dir, starting_idx=0):
 
 
 def save_images(img_list, target_dir, mode="mv"):
+    print(f'img_list: {img_list}')
     for img_path in tqdm(
         img_list,
         desc=f"saving {len(img_list)} images (mode={mode}) to {str(target_dir)}",
@@ -34,7 +35,7 @@ def convert_dataset(
     data_dir,
     dir_size=10000,
     hash_fn=None,
-    mode="mv",
+    mode="cp",
     ds_iterator=None,
 ):
     """
@@ -62,12 +63,13 @@ def convert_dataset(
         enumerate(ds_iterator),
         desc="converting dataset to standard format...",
     )
-
+    final_iter = 0
     for k, (img_path, data) in pbar:
         img_cpt_data = {}
         # get img data
         img_cpt_data.update(data)
 
+        #print(f'img_path: {str(img_path)}')
         if str(img_path) in new_img_locations.keys():
             # if filename is in the dictionary, it already has a new location
             new_img_path = new_img_locations[str(img_path)]["new_img_path"]
@@ -78,7 +80,8 @@ def convert_dataset(
                 ]["hash"]
         else:
             # if file exists in the old location, it will get moved to a new directory
-            new_img_path = f"images/{save_img_dir.name}/{img_path.name}"
+            #new_img_path = f"images/{save_img_dir}/{img_path}"
+            new_img_path = f"{img_path}"
             img_cpt_data["image_path"] = new_img_path
             new_img_locations[str(img_path)] = {"new_img_path": new_img_path}
             # original location is saved an later saved to the new directory
@@ -97,18 +100,21 @@ def convert_dataset(
 
         img_data_list.append(img_cpt_data)
 
+        if k % 10000 - 1 == 0:
+            print(f'img_path_list len: {len(img_path_list)}')
+
+
         # save images in specified images folder (maximum of dir_size images per folder)
-        if (len(img_path_list) % dir_size == 0 and len(img_path_list) > 0) or (
-            k == len(ds_iterator) - 1
-        ):
+        if (len(img_path_list) % dir_size == 0 and len(img_path_list) > 0):
+            print(f"saving {len(img_path_list)} images...")
             os.makedirs(save_img_dir, exist_ok=True)
             save_images(img_path_list, save_img_dir, mode=mode)
             img_path_list = []
             num_img_dirs += 1
             save_img_dir = data_dir / "images" / f"{num_img_dirs}/"
 
-        # save jdon data in specified image_data folder with consecutive labeling of the json files
-        if ((k + 1) % dir_size == 0) or (k == len(ds_iterator) - 1):
+        # save json data in specified image_data folder with consecutive labeling of the json files
+        if ((k + 1) % dir_size == 0):
             os.makedirs(save_data_dir, exist_ok=True)
             save_to_jsons(
                 img_data_list, save_data_dir, starting_idx=max(k + 1 - dir_size, 0)
@@ -116,3 +122,18 @@ def convert_dataset(
             # empty path and data lists and update save directories for next saving step
             img_data_list = []
             save_data_dir = data_dir / "image_data" / f"{int((k+1)/dir_size)}/"
+        final_iter = k
+
+    os.makedirs(save_img_dir, exist_ok=True)
+    save_images(img_path_list, save_img_dir, mode=mode)
+    img_path_list = []
+    num_img_dirs += 1
+    save_img_dir = data_dir / "images" / f"{num_img_dirs}/"
+
+    os.makedirs(save_data_dir, exist_ok=True)
+    save_to_jsons(
+                img_data_list, save_data_dir, starting_idx=max(final_iter + 1 - dir_size, 0)
+                )
+    # empty path and data lists and update save directories for next saving step
+    img_data_list = []
+    save_data_dir = data_dir / "image_data" / f"{int((final_iter+1)/dir_size)}/"

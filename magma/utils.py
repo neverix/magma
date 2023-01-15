@@ -1,6 +1,6 @@
 import argparse
 import torch.distributed as dist
-from transformers import GPT2TokenizerFast
+from transformers import AutoTokenizer, GPT2TokenizerFast
 import deepspeed
 from pathlib import Path
 import wandb
@@ -54,7 +54,14 @@ def get_tokenizer(name="gpt2", sequence_length=2048):
             {"cls_token": "<|image|>"}
         )  # add special image token to tokenizer
     else:
-        raise ValueError(f"Tokenizer {name} not recognized")
+        tokenizer = AutoTokenizer.from_pretrained(name)
+        tokenizer.pad_token = tokenizer.eos_token
+        tokenizer.padding_side = "right"
+        tokenizer.model_max_length = sequence_length
+        # setup lm settings
+        tokenizer.add_special_tokens(
+            {"cls_token": "<|image|>"}
+        )  # add special image token to tokenizer
     return tokenizer
 
 
@@ -346,6 +353,8 @@ def build_labels(
     """
     shape = input_embeddings.shape[:2]  # b, s
 
+    print(f'captions: {captions.shape[1]}')
+    print(f'default: {shape[1]}')
     assert captions.shape[1] >= shape[1]
 
     # make sure to add masked embedding tokens in the appropriate locations in the labels
@@ -368,5 +377,5 @@ def is_url(string):
     return string.startswith("http://") or string.startswith("https://")
 
 def download_checkpoint(checkpoint_url, save_as):
-    
+
     gdown.download(url = checkpoint_url, output = save_as, quiet=False)

@@ -1,0 +1,13 @@
+torchtyping
+typeguard
+transformers
+huggingface-hub
+gdown 
+cython
+tqdm
+timm
+tokenizers
+git+https://github.com/openai/CLIP.git
+git+https://github.com/mlfoundations/open_clip
+deepspeed
+wandb
