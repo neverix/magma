@@ -7,6 +7,7 @@ cython
 tqdm
 timm
 tokenizers
+accelerate
 git+https://github.com/openai/CLIP.git
 git+https://github.com/mlfoundations/open_clip
 deepspeed
