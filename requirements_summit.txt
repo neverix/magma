@@ -1,4 +1,5 @@
 cmake
+einops
 torchtyping
 typeguard
 transformers
